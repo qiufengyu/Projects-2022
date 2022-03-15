@@ -1,0 +1,289 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<script src="../static/js/jquery.min.js" type="text/javascript" charset='utf-8'></script>
+<script src="../static/js/echarts.js" charset='utf-8'></script>
+
+<script type="text/javascript">
+    // 初始化界面
+    $(function () {
+
+        $('#li_1').attr('class', '');
+        $('#li_2').attr('class', '');
+        $('#li_3').attr('class', 'active');
+        $('#li_4').attr('class', '');
+
+        // 判断是否登录
+        $.get('http://127.0.0.1:5000/check_login', {},
+            function (data) {
+                console.log(data);
+                if (data['login'] === false) {
+                    window.location.href = '/'
+                }
+                else {
+                    $('#show_login_reg').hide();
+                    $('#index_img').css('height', '95%');
+                }
+            }
+        );
+
+        $('#myTab').find("li").each(function () {
+            $(this).click(function () {
+                $('#echarts_content').empty();
+                const key = $(this).text();
+
+                $('#echarts_content').append(
+                    '<div class="row placeholders">' +
+                    '<div class="col-xs-6 placeholder" style="height:550px;" id="main1"></div>' +
+                    '<div class="col-xs-6 placeholder" style="height:550px;" id="main2"></div>' +
+                    '</div>'
+                );
+
+                if ($(this).attr('class') === 'is_numerical') {
+
+                    $.get('http://127.0.0.1:5000/fetch_house_area_and_price', {},
+                        function (data) {
+                            // 基于准备好的dom，初始化echarts实例
+                            var dom = document.getElementById("main1");
+                            var myChart = echarts.init(dom);
+
+                            var series_data = [];
+                            for (var i = 0; i < data['面积'].length; i++) {
+                                series_data.push([data['面积'][i], data['总价'][i]])
+                            }
+
+                            var option = {
+                                backgroundColor: '#F9F9F9',
+                                title: {
+                                    left: 'center',
+                                    text: '房屋总价 VS 房屋总面积',
+                                },
+                                xAxis: {
+                                    name: '房屋面积/平方米',
+                                    scale: true
+                                },
+                                yAxis: {
+                                    name: '总价/元',
+                                    scale: true
+                                },
+                                tooltip: {
+                                    trigger: 'axis',
+                                    axisPointer: {
+                                        type: 'cross'
+                                    }
+                                },
+                                grid: {
+                                    left: '3%',
+                                    right: '20%',
+                                    bottom: '3%',
+                                    containLabel: true
+                                },
+                                toolbox: {
+                                    feature: {
+                                        dataZoom: {
+                                            yAxisIndex: 'none'
+                                        },
+                                        restore: {},
+                                        saveAsImage: {}
+                                    }
+                                },
+                                series: [{
+                                    name: '总价',
+                                    type: 'scatter',
+                                    data: series_data,
+                                }]
+                            };
+
+                            if (option && typeof option === "object") {
+                                myChart.setOption(option, true);
+                            }
+
+                            var dom = document.getElementById("main2");
+                            var myChart = echarts.init(dom);
+                            var series_data = [];
+                            for (var i = 0; i < data['每间房间的面积'].length; i++) {
+                                series_data.push([data['每间房间的面积'][i], data['总价'][i]])
+                            }
+
+                            option = {
+                                backgroundColor: '#F9F9F9',
+                                title: {
+                                    left: 'center',
+                                    text: '房屋总价 VS 平均每间房间面积',
+                                },
+                                xAxis: {
+                                    name: '房屋面积/平方米',
+                                    scale: true
+                                },
+                                yAxis: {
+                                    name: '总价/元',
+                                    scale: true
+                                },
+                                tooltip: {
+                                    trigger: 'axis',
+                                    axisPointer: {
+                                        type: 'cross'
+                                    }
+                                },
+                                grid: {
+                                    left: '3%',
+                                    right: '20%',
+                                    bottom: '3%',
+                                    containLabel: true
+                                },
+                                toolbox: {
+                                    feature: {
+                                        dataZoom: {
+                                            yAxisIndex: 'none'
+                                        },
+                                        restore: {},
+                                        saveAsImage: {}
+                                    }
+                                },
+                                series: [{
+                                    name: '总价',
+                                    type: 'scatter',
+                                    data: series_data,
+                                }]
+                            };
+
+                            if (option && typeof option === "object") {
+                                myChart.setOption(option, true);
+                            }
+                        }
+                    );
+                } else {    // 类别类型的因素
+                    $.get('http://127.0.0.1:5000/fetch_influence_analysis_datas/' + key, {},
+                        function (data) {
+                            console.log(data);
+
+                            // 基于准备好的dom，初始化echarts实例
+                            var dom = document.getElementById("main1");
+                            var myChart = echarts.init(dom);
+
+                            var series_data = [];
+                            for (var i = 0; i < data['指标'].length; i++) {
+                                series_data.push({value: data['个数'][i], name: data['指标'][i]})
+                            }
+                            console.log(series_data);
+
+                            var option = {
+                                backgroundColor: '#F9F9F9',
+                                title: {
+                                    left: 'center',
+                                    text: '不同' + key + '房源数',
+                                },
+                                tooltip: {
+                                    trigger: 'item',
+                                    formatter: '{a} <br/>{b} : {c} ({d}%)'
+                                },
+                                series: [
+                                    {
+                                        name: '房源数',
+                                        type: 'pie',
+                                        radius: '55%',
+                                        center: ['50%', '60%'],
+                                        data: series_data,
+                                        emphasis: {
+                                            itemStyle: {
+                                                shadowBlur: 10,
+                                                shadowOffsetX: 0,
+                                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                            }
+                                        }
+                                    }
+                                ]
+                            };
+
+                            if (option && typeof option === "object") {
+                                myChart.setOption(option, true);
+                            }
+
+                            // 基于准备好的dom，初始化echarts实例
+                            var dom = document.getElementById("main2");
+                            var myChart = echarts.init(dom);
+
+                            var salary = [];
+                            for (var i = 0; i < data['均价'].length; i++)
+                                salary.push(data['均价'][i].toFixed(2))
+
+                            option = {
+                                backgroundColor: '#F9F9F9',
+                                title: {
+                                    left: 'center',
+                                    text: '不同' + key + '的平均房价的排名分布',
+                                },
+                                tooltip: {
+                                    trigger: 'axis',
+                                    axisPointer: {
+                                        type: 'shadow'
+                                    }
+                                },
+                                grid: {
+                                    left: '3%',
+                                    right: '12%',
+                                    bottom: '3%',
+                                    containLabel: true
+                                },
+                                xAxis: {
+                                    name: '均价/元',
+                                    type: 'value',
+                                    boundaryGap: [0, 0.01]
+                                },
+                                yAxis: {
+                                    type: 'category',
+                                    data: data['指标'],
+                                    "axisLabel": {
+                                        interval: 0
+                                    }
+                                },
+                                series: [
+                                    {
+                                        type: 'bar',
+                                        itemStyle: {
+                                            color: '#19CAAD'
+                                        },
+                                        data: salary
+                                    }
+                                ]
+                            };
+
+                            if (option && typeof option === "object") {
+                                myChart.setOption(option, true);
+                            }
+                        }
+                    );
+                }
+
+            })
+        });
+        $('#first').click();
+    });
+</script>
+
+<div class="container">
+    <!--右边展示-->
+    <h3 class="page-header">房价影响因素分析</h3>
+    <ul id="myTab" class="nav nav-tabs">
+        <li class="active" id="first"><a id="建造年代" data-toggle="tab"><b>建造年代</b></a></li>
+        <li class="is_numerical"><a id="建筑面积" data-toggle="tab"><b>建筑面积</b></a></li>
+        <li><a id="所属区域" data-toggle="tab"><b>所属区域</b></a></li>
+        <li><a id="房屋户型_室" data-toggle="tab"><b>房屋户型_室</b></a></li>
+        <li><a id="房屋户型_厅" data-toggle="tab"><b>房屋户型_厅</b></a></li>
+        <li><a id="房屋户型_卫" data-toggle="tab"><b>房屋户型_卫</b></a></li>
+        <li><a id="房屋朝向" data-toggle="tab"><b>房屋朝向</b></a></li>
+        <li><a id="物业类型" data-toggle="tab"><b>物业类型</b></a></li>
+        <li><a id="所在楼层" data-toggle="tab"><b>所在楼层</b></a></li>
+        <li><a id="装修程度" data-toggle="tab"><b>装修程度</b></a></li>
+        <li><a id="配套电梯" data-toggle="tab"><b>配套电梯</b></a></li>
+        <li><a id="房本年限" data-toggle="tab"><b>房本年限</b></a></li>
+        <li><a id="产权性质" data-toggle="tab"><b>产权性质</b></a></li>
+        <li><a id="唯一住房" data-toggle="tab"><b>唯一住房</b></a></li>
+    </ul>
+
+    <div class="container" id="echarts_content" style="margin-top: 20px;">
+    </div>
+
+</div>
+
+{% endblock %}

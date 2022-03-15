@@ -1,0 +1,220 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<script src="../static/js/jquery.min.js" type="text/javascript" charset='utf-8'></script>
+<script src="../static/js/echarts.js" charset='utf-8'></script>
+<script src="../static/js/echarts-wordcloud.min.js" type="text/javascript" charset='utf-8'></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts/dist/extension/dataTool.min.js"></script>
+
+<script type="text/javascript">
+    // 初始化界面
+    $(function () {
+
+        $('#li_1').attr('class', '');
+        $('#li_2').attr('class', 'active');
+        $('#li_3').attr('class', '');
+        $('#li_4').attr('class', '');
+
+        // 判断是否登录
+        $.get('http://127.0.0.1:5000/check_login', {},
+            function (data) {
+                console.log(data);
+                if (data['login'] === false) {
+                    window.location.href = '/'
+                }
+                else {
+                    $('#show_login_reg').hide();
+                    $('#index_img').css('height', '95%');
+                }
+            }
+        );
+
+
+        $.get('http://127.0.0.1:5000/area_house_count_mean_house_price', {},
+            function (data) {
+                var dom = document.getElementById("main1");
+                var myChart = echarts.init(dom);
+
+                var option = {
+                    title: {
+                        left: 'center',
+                        text: '合肥不同地区二手房的房源数的分布情况',
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        name: '区域',
+                        type: 'category',
+                        data: data['地区']
+                    },
+                    yAxis: {
+                        name: '房源数',
+                        type: 'value'
+                    },
+                    series: [
+                        {
+                            name: '房源数',
+                            type: 'line',
+                            itemStyle: {
+                                color: '#ca5455',
+                            },
+                            lineStyle: {
+                                width: 4
+                            },
+                            data: data['地区房子数量']
+                        }
+                    ]
+                };
+
+                if (option && typeof option === "object") {
+                    myChart.setOption(option, true);
+                }
+
+                dom = document.getElementById("main2");
+                myChart = echarts.init(dom);
+
+                var mean_prices = [];
+                for (var i = 0; i < data['地区平均房价'].length; i++) {
+                    mean_prices.push(data['地区平均房价'][i].toFixed(0))
+                }
+
+                option = {
+                    backgroundColor: '#F9F9F9',
+                    title: {
+                        left: 'center',
+                        text: '合肥不同地区二手房的平均价格分布情况'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '3%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    yAxis: {
+                        name: '数量',
+                        type: 'value',
+                        boundaryGap: [0, 0.01]
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: data['地区'],
+                        axisLabel: {
+                            interval: 0
+                        }
+                    },
+                    series: [
+                        {
+                            type: 'bar',
+                            itemStyle: {
+                                color: '#6a6eca'
+                            },
+                            data: mean_prices
+                        }
+                    ]
+                };
+
+                if (option && typeof option === "object") {
+                    myChart.setOption(option, true);
+                }
+
+                dom = document.getElementById("main3");
+                myChart = echarts.init(dom);
+
+                var box_data = echarts.dataTool.prepareBoxplotData(data['地区房价数据']);
+
+                option = {
+                    title: [
+                        {
+                            text: '合肥不同地区二手房的平均房价发布的箱型图',
+                            left: 'center',
+                        }
+                    ],
+                    tooltip: {
+                        trigger: 'item',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    grid: {
+                        left: '10%',
+                        right: '10%',
+                        bottom: '15%'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: data['地区'],
+                        boundaryGap: true,
+                        nameGap: 30,
+                        splitArea: {
+                            show: false
+                        },
+                        splitLine: {
+                            show: false
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '平均房价/元',
+                        splitArea: {
+                            show: true
+                        }
+                    },
+                    series: [
+                        {
+                            name: 'boxplot',
+                            type: 'boxplot',
+                            data: box_data.boxData
+
+                        }
+                    ]
+                };
+
+                if (option && typeof option === "object") {
+                    myChart.setOption(option, true);
+                }
+            }
+        );
+
+        $.get('http://127.0.0.1:5000/top20_mean_price', {},
+            function (datas) {
+                datas.forEach((house, index) => {
+                    $('#result_items').append('<tr><td>' + house[0] + '</td><td>' + house[1] + '</td><td>' + house[2] + '</td><td>' + house[3] + '</td><td>' + house[4] + '</td><td>' + house[5] + '</td><td>' + house[6] + '</td><td>' + house[7] + '</td><td>' + house[8] + '</td><td><a target="_blank" href="'+house[9]+'">查看详情</a></td></tr>')
+                });
+            }
+        );
+    });
+</script>
+
+<div class="container">
+    <h3 class="page-header">合肥不同地区二手房房源数与平均房价的分布情况</h3>
+    <div class="row placeholders" style="margin-top: 2px;">
+        <div class="col-xs-12 placeholder" style="height:500px;" id="main1"></div>
+    </div>
+    <div class="row placeholders" style="margin-top: 2px;">
+        <div class="col-xs-12 placeholder" style="height:500px;" id="main2"></div>
+    </div>
+
+    <h3 class="page-header">合肥各区域二手房价格分布箱线图</h3>
+    <div class="row placeholders" style="margin-top: 2px;">
+        <div class="col-xs-12 placeholder" style="height:500px;" id="main3"></div>
+    </div>
+
+
+</div>
+{% endblock %}

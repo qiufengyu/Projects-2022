@@ -1,0 +1,213 @@
+﻿{% extends "layout.html" %}
+
+{% block content %}
+<script src="../static/js/jquery.min.js" type="text/javascript" charset='utf-8'></script>
+<script src="../static/js/echarts.js" charset='utf-8'></script>
+
+<script type="text/javascript">
+    // 初始化界面
+    $(function () {
+        $('#li_1').attr('class', '');
+        $('#li_2').attr('class', '');
+        $('#li_3').attr('class', '');
+        $('#li_4').attr('class', 'active');
+
+        // 判断是否登录
+        $.get('http://127.0.0.1:5000/check_login', {},
+            function (data) {
+                console.log(data);
+                if (data['login'] === false) {
+                    window.location.href = '/'
+                }
+                else {
+                    $('#show_login_reg').hide();
+                    $('#index_img').css('height', '95%');
+                }
+            }
+        );
+
+        $('select').each(function () {
+            var select = $(this);
+            $.get('http://127.0.0.1:5000/get_all_unique_values/' + $(this).attr('id'), {},
+                function (results) {
+                    for (var i = 0; i < results.length; i++) {
+                        var key_count = results[i];
+                        select.append('<option value="' + key_count[0] + '">' + key_count[0] + '（' + key_count[1] + '套房源）' + '</option>');
+                    }
+                }
+            );
+
+        });
+
+        $('#submit_predict').click(function (args) {
+
+            var xiaoqu = $('#所属小区').val();
+            var mianji = $('#建筑面积').val();
+
+            if ((xiaoqu === undefined) || (mianji === undefined) || (xiaoqu === '') || (mianji === '')) {
+                alert('请选择小区和建筑面积！');
+                return
+            }
+
+            var params = {};
+            $('table select').each(function () {
+                var select = $(this);
+                params[select.attr('id')] = select.val()
+            });
+            params['所属小区'] = xiaoqu;
+            params['建筑面积'] = mianji;
+
+            console.log(params);
+            $.get('http://127.0.0.1:5000/history_and_predict_price', params,
+                function (data) {
+                    var dom = document.getElementById("main1");
+                    var myChart = echarts.init(dom);
+                    var series_data = [];
+                    for (var i = 0; i < data['面积'].length; i++) {
+                        series_data.push([data['面积'][i], data['总价'][i]])
+                    }
+
+                    data['predict_price'] = parseInt(data['predict_price']);
+                    $('#predict_price').text(data['predict_price']);
+                    var option = {
+                        backgroundColor: '#F9F9F9',
+                        title: {
+                            left: 'center',
+                            text: xiaoqu + '当前在售的所有房源的房价分布',
+                        },
+                        xAxis: {
+                            name: '房屋面积/平方米',
+                            scale: true
+                        },
+                        yAxis: {
+                            name: '总价/元',
+                            scale: true
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'cross'
+                            }
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '20%',
+                            bottom: '3%',
+                            containLabel: true
+                        },
+                        toolbox: {
+                            feature: {
+                                dataZoom: {
+                                    yAxisIndex: 'none'
+                                },
+                                restore: {},
+                                saveAsImage: {}
+                            }
+                        },
+                        series: [
+                            {
+                                name: '当前预测价格',
+                                type: 'effectScatter',
+                                symbolSize: 20,
+                                data: [
+                                    [mianji, data['predict_price']]
+                                ]
+                            },
+                            {
+                                name: '当前在售总价',
+                                type: 'scatter',
+                                data: series_data,
+                                itemStyle: {
+                                    color: '#19CAAD'
+                                },
+                            }]
+                    };
+
+                    if (option && typeof option === "object") {
+                        myChart.setOption(option, true);
+                    }
+                }
+            );
+        });
+
+    });
+</script>
+
+<div class="container">
+    <!--右边展示-->
+    <h3 class="page-header">基于决策树算法的房价预测模型</h3>
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th>建造年代</th>
+            <th>房屋朝向</th>
+            <th>物业类型</th>
+            <th>所在楼层</th>
+            <th>装修程度</th>
+            <th>配套电梯</th>
+            <th>房本年限</th>
+            <th>产权年限</th>
+            <th>产权性质</th>
+            <th>唯一住房</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td><select class="combobox" id="建造年代" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="房屋朝向" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="物业类型" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="所在楼层" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="装修程度" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="配套电梯" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="房本年限" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="产权年限" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="产权性质" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="唯一住房" style="width: 100px; height: 30px"></select></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <table class="table" style="margin-top: -20px;">
+        <thead>
+        <tr>
+            <th>所属区域</th>
+            <th>所属小区</th>
+            <th>室数</th>
+            <th>厅数</th>
+            <th>卫数</th>
+            <th>总楼层</th>
+            <th>建筑面积/平方米</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td><select class="combobox" id="所属区域" style="width: 150px; height: 30px"></select></td>
+            <td><select class="combobox" id="所属小区" style="width: 150px; height: 30px"></select></td>
+            <td><select class="combobox" id="房屋户型_室" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="房屋户型_厅" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="房屋户型_卫" style="width: 100px; height: 30px"></select></td>
+            <td><select class="combobox" id="总楼层" style="width: 100px; height: 30px"></select></td>
+            <td><input id="建筑面积" type="text"/></select></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p style="font-size: 17px;">
+        <button class="btn btn-primary pull-right" id="submit_predict">
+            预测当前配置的房价
+        </button>
+    </p>
+
+    <p style="font-size: 19px; margin-top: 15px;">
+        <b><span>预测的价格为：</span><span id="predict_price" style="color: red;">?</span><span>&nbsp;&nbsp;万元</span></b>
+    </p>
+
+    <div class="container" style="margin-top: 20px;">
+        <div class="col-xs-12 placeholder" style="height:400px;" id="main1">
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

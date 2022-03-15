@@ -1,0 +1,190 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<script src="../static/js/jquery.min.js" type="text/javascript" charset='utf-8'></script>
+<script src="../static/js/echarts.js" charset='utf-8'></script>
+<script src="../static/js/echarts-wordcloud.min.js" type="text/javascript" charset='utf-8'></script>
+
+<script type="text/javascript">
+    // 初始化界面
+    $(function () {
+
+        $('#li_1').attr('class', 'active');
+        $('#li_2').attr('class', '');
+        $('#li_3').attr('class', '');
+        $('#li_4').attr('class', '');
+
+        // 判断是否登录
+        $.get('http://127.0.0.1:5000/check_login', {},
+            function (data) {
+                console.log(data);
+                if (data['login'] === false) {
+                    window.location.href = '/'
+                }
+                else {
+                    $('#show_login_reg').hide();
+                    $('#index_img').css('height', '95%');
+                }
+            }
+        );
+
+        $.get('http://127.0.0.1:5000/xiaoqu_name_wordcloud', {},
+            function (data) {
+                echartsCloud();//初始化echarts图
+
+                function echartsCloud() {
+                    // 基于准备好的dom，初始化echarts实例
+                    var myChart = echarts.init(document.getElementById('main1'));
+
+                    myChart.setOption({
+                        title: {
+                            left: 'center',
+                            text: '小区名称关键词词云',
+                        },
+                        tooltip: {},
+                        series: [{
+                            type: 'wordCloud',  //类型为字符云
+                            shape: 'smooth',  //平滑 椭圆:ellipse 圆形:circle
+                            gridSize: 4,    //网格尺寸
+                            size: ['100%', '100%'],
+                            sizeRange: [15, 160],
+                            rotationRange: [0, 30], //旋转范围
+                            textStyle: {
+                                normal: {
+                                    fontFamily: 'sans-serif',
+                                    color: function () {
+                                        return 'rgb('
+                                            + [Math.round(Math.random() * 160),
+                                                Math.round(Math.random() * 160),
+                                                Math.round(Math.random() * 160)
+                                            ].join(',') + ')';
+                                    }
+                                },
+                                emphasis: {
+                                    shadowBlur: 5,       //阴影距离
+                                    shadowColor: '#333'  //阴影颜色
+                                }
+                            },
+                            data: data['词云数据'],
+                        }]
+                    });
+                    $(window).resize(function () {
+                        myChart.resize();
+                    });
+                }
+            }
+        );
+
+        $.get('http://127.0.0.1:5000/query_key_count/产权性质', {},
+            function (data) {
+                console.log(data);
+                var dom = document.getElementById("main2");
+                var myChart = echarts.init(dom);
+
+                var option = {
+                    backgroundColor: '#F9F9F9',
+                    title: {
+                        left: 'center',
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '12%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    yAxis: {
+                        name: '数量',
+                        type: 'value',
+                        boundaryGap: [0, 0.01]
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: data['keys'],
+                        axisLabel: {
+                            interval: 0
+                        }
+                    },
+                    series: [
+                        {
+                            type: 'bar',
+                            itemStyle: {
+                                color: '#19CAAD'
+                            },
+                            data: data['counts']
+                        }
+                    ]
+                };
+
+                if (option && typeof option === "object") {
+                    myChart.setOption(option, true);
+                }
+            }
+        );
+
+        $.get('http://127.0.0.1:5000/query_key_count/产权年限', {},
+            function (data) {
+                console.log(data);
+                var dom = document.getElementById("main3");
+                var myChart = echarts.init(dom);
+                var series_data = [];
+                for (var i = 0; i < data['keys'].length; i++) {
+                    series_data.push({value: data['counts'][i], name: data['keys'][i]});
+                }
+
+                var option = {
+                    backgroundColor: '#F9F9F9',
+                    title: {
+                        left: 'center',
+                        text: '合肥二手房不同房屋产权年限分布情况',
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{a} <br/>{b} : {c} ({d}%)'
+                    },
+                    series: [
+                        {
+                            name: '在售房源',
+                            type: 'pie',
+                            radius: '60%',
+                            center: ['50%', '60%'],
+                            data: series_data,
+                            emphasis: {
+                                itemStyle: {
+                                    shadowBlur: 10,
+                                    shadowOffsetX: 0,
+                                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                }
+                            }
+                        }
+                    ]
+                };
+                if (option && typeof option === "object") {
+                    myChart.setOption(option, true);
+                }
+            }
+        );
+
+    });
+</script>
+
+<div class="container">
+    <h3 class="page-header">合肥小区名称关键词抽取并词云分析</h3>
+</div>
+<div class="row placeholders" style="margin-top: 10px;">
+    <div class="col-xs-12 placeholder" style="height:500px;" id="main1"></div>
+</div>
+
+<div class="container" style="margin-top: -40px;">
+    <h3 class="page-header">合肥二手房房屋用途和房屋类型分布直方图</h3>
+    <div class="row placeholders" style="margin-top: 2px;">
+        <div class="col-xs-6 placeholder" style="height:500px;" id="main2"></div>
+        <div class="col-xs-6 placeholder" style="height:500px;" id="main3"></div>
+    </div>
+</div>
+{% endblock %}
